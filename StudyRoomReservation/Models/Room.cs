@@ -16,21 +16,21 @@ public class Room
     /// <param name="name">Name of the room</param>
     /// <param name="capacity">Maximum number of seats</param>
     /// <exception cref="ArgumentException"></exception>
-    public Room(int id, string name, int capacity)
+    public Room(string name, int capacity)
     {
-        if (id <= 0) throw new ArgumentException("Room id must be greater than zero.");
         if (string.IsNullOrWhiteSpace(name)) throw new ArgumentException("Room name cannot be empty.");
         if (capacity <= 0) throw new ArgumentException("Room capacity must be greater than zero.");
-
-        Id = id;
+        
         Name = name;
         Capacity = capacity;
 
-        for (int i = 1; i < capacity; i++)
+        for (int i = 1; i <= capacity; i++)
         {
-            Seats.Add(new Seat(i));
+            Seats.Add(new Seat());
         }
     }
+
+    public Room() { }
 
     /// <summary>
     /// Method finding a seat by seat's number.

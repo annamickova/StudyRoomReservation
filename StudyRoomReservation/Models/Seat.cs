@@ -11,15 +11,7 @@ public class Seat
     /// <summary>
     /// Initializes instance of Seat class.
     /// </summary>
-    /// <param name="id">Unique identifier of seat</param>
-    /// <exception cref="ArgumentException">Raised when id is not a positive number</exception>
-    public Seat(int id)
-    {
-        if (id <= 0)
-            throw new ArgumentException("Seat ID must be positive.");
-
-        Id = id;
-    }
+    public Seat() { }
 
     /// <summary>
     /// Method reserving new seat.
