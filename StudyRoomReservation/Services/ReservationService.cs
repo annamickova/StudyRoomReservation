@@ -1,3 +1,5 @@
+using StudyRoomReservation.Repository;
+
 namespace StudyRoomReservation.Services;
 
 /// <summary>
@@ -6,30 +8,21 @@ namespace StudyRoomReservation.Services;
 public class ReservationService
 {
     private readonly RoomService _roomService;
-    private readonly List<Reservation> _reservations = new();
-    private readonly object _lock = new();
-    private int _nextId = 1;
+    private readonly ReservationRepository _repository;
     
     /// <summary>
-    /// Initializes a new instance of the RoomService.
+    /// Initializes a new instance of the ReservationService.
     /// </summary>
-    /// <param name="roomService"></param>
-    public ReservationService(RoomService roomService)
+    /// <param name="roomService">Room service for validating rooms and seats</param>
+    /// <param name="repository">Repository for persistence</param>
+    public ReservationService(RoomService roomService, ReservationRepository repository)
     {
-        _roomService = roomService;
-    }
-    
-    /// <summary>
-    /// Generates new unique id.
-    /// </summary>
-    /// <returns></returns>
-    public int GenerateNewId()
-    {
-        return Interlocked.Increment(ref _nextId);
+        _roomService = roomService ?? throw new ArgumentNullException(nameof(roomService));
+        _repository = repository ?? throw new ArgumentNullException(nameof(repository));
     }
 
     /// <summary>
-    /// Attempts to create a new reservation.
+    /// Attempts to create a new reservation in the database.
     /// </summary>
     /// <param name="reservation">Reservation to be created</param>
     /// <exception cref="ArgumentNullException">Thrown if reservation is null</exception>
@@ -40,34 +33,18 @@ public class ReservationService
     {
         if (reservation == null) throw new ArgumentNullException(nameof(reservation));
         var seat = _roomService.GetSeat(reservation.RoomId, reservation.SeatId);
-
-        lock (_lock)
-        {
-            var conflicting = _reservations
-                .Where(r => r.RoomId == reservation.RoomId && r.SeatId == reservation.SeatId)
-                .Any(r => TimeOverlap(r.StartTime, r.EndTime, reservation.StartTime, reservation.EndTime));
-
-            if (conflicting) throw new InvalidOperationException("Seat is already reserved during this time interval.");
-            _reservations.Add(reservation);
-        }
-    }
-    
-    /// <summary>
-    /// Returns all reservations.
-    /// </summary>
-    public IReadOnlyList<Reservation> GetAllReservations()
-    {
-        lock (_lock)
-        {
-            return _reservations.AsReadOnly();
-        }
+        _repository.AddReservation(reservation);
     }
 
     /// <summary>
-    /// Determines whether two time intervals overlap.
+    /// Returns all reservations from the database for a specific room or all rooms.
     /// </summary>
-    private bool TimeOverlap(DateTime start1, DateTime end1, DateTime start2, DateTime end2)
+    /// <param name="roomId">Optional room ID filter</param>
+    public List<Reservation> GetAllReservations(int? roomId = null)
     {
-        return start1 < end2 && start2 < end1;
+        if (roomId.HasValue)
+            return _repository.GetReservationsForRoom(roomId.Value);
+        else
+            return _repository.GetAllReservations();
     }
 }

@@ -1,10 +1,18 @@
+using StudyRoomReservation.Repository;
+
 namespace StudyRoomReservation.Services;
+
 /// <summary>
 /// Service responsible for managing rooms and seats. 
 /// </summary>
 public class RoomService
 {
-    private readonly List<Room> _rooms = new();
+    private readonly RoomRepository _repository;
+
+    public RoomService(RoomRepository repository)
+    {
+        _repository = repository;
+    }
 
     /// <summary>
     /// Creates a new room.
@@ -15,9 +23,12 @@ public class RoomService
     public void AddRoom(Room room)
     {
         if (room == null) throw new ArgumentNullException(nameof(room));
-        if (_rooms.Any(r => r.Id == room.Id))  
+
+        var existing = _repository.GetRoomById(room.Id);
+        if (existing != null)
             throw new InvalidOperationException($"Room with ID {room.Id} already exists.");
-        _rooms.Add(room);
+
+        _repository.AddRoom(room);
     }
     
     /// <summary>
@@ -25,7 +36,7 @@ public class RoomService
     /// </summary>
     public IReadOnlyList<Room> GetAllRooms()
     {
-        return _rooms.AsReadOnly();
+        return _repository.GetAllRooms();
     }
 
     /// <summary>
@@ -35,7 +46,7 @@ public class RoomService
     /// <returns>Room if found</returns>
     public Room? GetRoom(int id)
     {
-        return _rooms.FirstOrDefault(r => r.Id == id);
+        return _repository.GetRoomById(id);
     }
 
     /// <summary>
@@ -47,11 +58,16 @@ public class RoomService
     /// <exception cref="InvalidOperationException"></exception>
     public Seat GetSeat(int roomId, int seatId)
     {
-        var room = GetRoom(roomId);
-        if (room == null) throw new InvalidOperationException($"Room with ID {roomId} does not exist.");
+        var room = _repository.GetRoomById(roomId);
+        if (room == null)
+            throw new InvalidOperationException($"Room with ID {roomId} does not exist.");
+
         var seat = room.Seats.FirstOrDefault(s => s.Id == seatId);
-        if (seat == null) throw new InvalidOperationException($"Seat with ID {seatId} does not exist.");
+        if (seat == null)
+            throw new InvalidOperationException($"Seat with ID {seatId} does not exist.");
+
         return seat;
     }
+
 
 }
