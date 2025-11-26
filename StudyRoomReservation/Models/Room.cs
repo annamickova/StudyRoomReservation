@@ -26,7 +26,7 @@ public class Room
         Name = name;
         Capacity = capacity;
 
-        for (int i = 0; i < capacity; i++)
+        for (int i = 1; i < capacity; i++)
         {
             Seats.Add(new Seat(i));
         }
