@@ -8,6 +8,7 @@ public class ReservationService
     private readonly RoomService _roomService;
     private readonly List<Reservation> _reservations = new();
     private readonly object _lock = new();
+    private int _nextId = 1;
     
     /// <summary>
     /// Initializes a new instance of the RoomService.
@@ -16,6 +17,15 @@ public class ReservationService
     public ReservationService(RoomService roomService)
     {
         _roomService = roomService;
+    }
+    
+    /// <summary>
+    /// Generates new unique id.
+    /// </summary>
+    /// <returns></returns>
+    public int GenerateNewId()
+    {
+        return Interlocked.Increment(ref _nextId);
     }
 
     /// <summary>
