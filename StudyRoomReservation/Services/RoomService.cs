@@ -53,4 +53,5 @@ public class RoomService
         if (seat == null) throw new InvalidOperationException($"Seat with ID {seatId} does not exist.");
         return seat;
     }
+
 }
