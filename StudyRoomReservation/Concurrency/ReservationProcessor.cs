@@ -68,7 +68,7 @@ public class ReservationProcessor
         if (!room.Seats.Any(s => s.Id == req.SeatId))
             throw new Exception("Seat not found in room.");
 
-        var reservation = new Reservation(_reservationService.GenerateNewId(), req.RoomId, req.SeatId,
+        var reservation = new Reservation(req.RoomId, req.SeatId,
             "username", req.StartTime, req.EndTime);
 
         _reservationService.CreateReservation(reservation);
