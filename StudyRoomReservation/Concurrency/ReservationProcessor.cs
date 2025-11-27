@@ -12,6 +12,9 @@ public class ReservationProcessor
     private readonly RoomService _roomService;
     private readonly ConcurrentQueue<ReservationRequest> _queue = new();
     private readonly AutoResetEvent _signal = new(false);
+    
+    private readonly int _workerCount = 4;
+    private readonly List<Thread> _workers = new();
     public ReservationProcessor(ReservationService reservationService, RoomService roomService)
     {
         _reservationService = reservationService;
@@ -33,25 +36,39 @@ public class ReservationProcessor
     /// </summary>
     public void Start()
     {
-        Task.Run(() =>
+        for (int i = 0; i < _workerCount; i++)
         {
-            while (true)
+            var worker = new Thread(ProcessQueue)
             {
-                _signal.WaitOne();
+                IsBackground = true,
+                Name = $"Worker-{i + 1}"
+            };
+            _workers.Add(worker);
+            worker.Start();
+        }
+    }
+    
+    /// <summary>
+    /// Worker thread method that continuously processes queued reservation requests.
+    /// </summary>
+    private void ProcessQueue()
+    {
+        while (true)
+        {
+            _signal.WaitOne();
 
-                while (_queue.TryDequeue(out var req))
+            while (_queue.TryDequeue(out var req))
+            {
+                try
                 {
-                    try
-                    {
-                        ProcessRequest(req);
-                    }
-                    catch (Exception e)
-                    {
-                        req.Completion.SetException(e);
-                    }
+                    ProcessRequest(req);
+                }
+                catch (Exception e)
+                {
+                    req.Completion.SetException(e);
                 }
             }
-        });
+        }
     }
     
     /// <summary>
@@ -68,10 +85,7 @@ public class ReservationProcessor
         if (!room.Seats.Any(s => s.Id == req.SeatId))
             throw new Exception("Seat not found in room.");
 
-        var reservation = new Reservation(req.RoomId, req.SeatId,
-            "username", req.StartTime, req.EndTime);
-
-        _reservationService.CreateReservation(reservation);
+        var reservation = _reservationService.CreateReservation(req);
 
         req.Completion.SetResult(reservation);
     }
