@@ -37,6 +37,7 @@ public class RoomRepository
 
             int seatId = Convert.ToInt32(seatCmd.ExecuteScalar());
             seat.Id = seatId;
+            seat.RoomId = newId;
         }
 
         return newId;
@@ -84,9 +85,7 @@ public class RoomRepository
             {
                 room.Seats.Add(new Seat
                 {
-                    Id = seatReader.GetInt32("id"),
-                    IsReserved = seatReader.GetBoolean("is_reserved"),
-                    ReservedBy = seatReader.IsDBNull("reserved_by") ? null : seatReader.GetString("reserved_by")
+                    Id = seatReader.GetInt32("id")
                 });
             }
         }
@@ -102,7 +101,6 @@ public class RoomRepository
     public List<Room> GetAllRooms()
     {
         var rooms = new List<Room>();
-
         using var conn = new MySqlConnection(DatabaseConfig.ConnectionString);
         conn.Open();
         
@@ -116,29 +114,34 @@ public class RoomRepository
                     Id = reader.GetInt32("id"),
                     Name = reader.GetString("name"),
                     Capacity = reader.GetInt32("capacity"),
+                    Seats = new List<Seat>()
                 });
+            }
+        }
+        
+        var seatMap = new Dictionary<int, List<Seat>>(); // key = roomId
+        using (var seatCmd = new MySqlCommand("SELECT id, room_id FROM seat", conn))
+        using (var seatReader = seatCmd.ExecuteReader())
+        {
+            while (seatReader.Read())
+            {
+                int roomId = seatReader.GetInt32("room_id");
+                var seat = new Seat { Id = seatReader.GetInt32("id"), RoomId = roomId };
+
+                if (!seatMap.ContainsKey(roomId))
+                    seatMap[roomId] = new List<Seat>();
+
+                seatMap[roomId].Add(seat);
             }
         }
         
         foreach (var room in rooms)
         {
-            using var seatCmd = new MySqlCommand("SELECT id FROM seat WHERE room_id=@room_id", conn);
-            seatCmd.Parameters.AddWithValue("@room_id", room.Id);
-
-            using var seatReader = seatCmd.ExecuteReader();
-            while (seatReader.Read())
-            {
-                room.Seats.Add(new Seat
-                {
-                    Id = seatReader.GetInt32("id"),
-                    IsReserved = false,
-                    ReservedBy = null
-                });
-            }
+            if (seatMap.ContainsKey(room.Id))
+                room.Seats = seatMap[room.Id];
         }
 
         return rooms;
     }
-
     
 }
