@@ -1,6 +1,8 @@
 ﻿using StudyRoomReservation.Concurrency;
 using StudyRoomReservation.Repository;
 using StudyRoomReservation.Services;
+using Microsoft.AspNetCore.Mvc;
+using System.Text.Json;
 
 namespace StudyRoomReservation;
 
@@ -9,43 +11,119 @@ class Program
     static async Task Main(string[] args)
     {
         DatabaseConfig.Load();
-        var roomRepo = new RoomRepository();
-        var reservationRepo = new ReservationRepository();
+        var builder = WebApplication.CreateBuilder(args);
         
-        var roomService = new RoomService(roomRepo);
-        var reservationService = new ReservationService(roomService, reservationRepo);
+        builder.Services.AddSingleton<RoomRepository>();
+        builder.Services.AddSingleton<ReservationRepository>();
         
-        var processor = new ReservationProcessor(reservationService, roomService);
-        processor.Start();
-        Console.WriteLine("=== STARTING TEST ===");
+        builder.Services.AddSingleton<RoomService>();
+        builder.Services.AddSingleton<ReservationService>();
+        
+        builder.Services.AddSingleton<ReservationProcessor>();
 
+        var app = builder.Build();
+        
+        var processor = app.Services.GetRequiredService<ReservationProcessor>();
         processor.Start();
-        var room = new Room("TestRoom", 10);
-        roomService.AddRoom(room);
-        Console.WriteLine($"Room created {room.Id}");
-        var request1 = new ReservationRequest(room.Id, room.Seats[0].Id, "Emma", DateTime.Now, DateTime.Now.AddHours(1));
-        var request2 = new ReservationRequest(room.Id, room.Seats[0].Id, "Oleg", DateTime.Now.AddHours(1), DateTime.Now.AddHours(2));
-        var request3 = new ReservationRequest(room.Id, room.Seats[2].Id, "Alex", DateTime.Now.AddMinutes(30), DateTime.Now.AddHours(1.5));
+        Console.WriteLine("✓ Reservation processor started");
         
-        var task1 = processor.EnqueueAsync(request1);
-        var task2 = processor.EnqueueAsync(request2);
-        var task3 = processor.EnqueueAsync(request3);
-        try
-        { 
-            var res1 = await task1; 
-            Console.WriteLine($"Reservation 1 created, seat: {res1.SeatId}");
-            var res2 = await task2; 
-            Console.WriteLine($"Reservation 2 created, seat: {res2.SeatId}");
-            var res3 = await task3; 
-            Console.WriteLine($"Reservation 3 created, seat: {res3.SeatId}");
-        }
-        catch (InvalidOperationException ex)
+        app.MapGet("/api/rooms", ([FromServices] RoomService roomService) =>
         {
-            Console.WriteLine($"Correctly blocked conflict: {ex.Message}");
-        }   
+            var rooms = roomService.GetAllRooms();
+            var result = rooms.Select(r => new
+            {
+                id = r.Id,
+                name = r.Name,
+                capacity = r.Capacity,
+                seats = (r.Seats ?? new List<Seat>()).Select(s => new { id = s.Id }).ToList()
+            }).ToList();
+
+            Console.WriteLine("JSON to send: " + System.Text.Json.JsonSerializer.Serialize(result));
+            return Results.Ok(result);
+        });
         
-        Console.WriteLine("=== TEST COMPLETE ===");
+        app.MapPost("/api/reserve", async (ReservationRequest request, ReservationService reservationService) =>
+        {
+            try
+            {
+                Console.WriteLine("=== Reservation Request Received ===");
+                Console.WriteLine($"Request object is null: {request == null}");
+
+                if (request == null)
+                {
+                    Console.WriteLine("✗ Request is null");
+                    return Results.BadRequest(new { error = "Request body is null" });
+                }
+
+                Console.WriteLine($"RoomId: {request.RoomId}");
+                Console.WriteLine($"SeatId: {request.SeatId}");
+                Console.WriteLine($"Username: '{request.Username}'");
+                Console.WriteLine($"StartTime: {request.StartTime}");
+                Console.WriteLine($"EndTime: {request.EndTime}");
+
+                // Validation
+                if (string.IsNullOrWhiteSpace(request.Username))
+                {
+                    Console.WriteLine("✗ Username is missing or empty");
+                    return Results.BadRequest(new { error = "Username is required" });
+                }
+
+                if (request.SeatId <= 0)
+                {
+                    Console.WriteLine($"✗ Invalid SeatId: {request.SeatId}");
+                    return Results.BadRequest(new { error = "Valid SeatId is required" });
+                }
+
+                if (request.StartTime >= request.EndTime)
+                {
+                    Console.WriteLine($"✗ StartTime ({request.StartTime}) >= EndTime ({request.EndTime})");
+                    return Results.BadRequest(new { error = "StartTime must be before EndTime" });
+                }
+
+                Console.WriteLine("✓ Validation passed, creating reservation...");
+                
+                var reservation = reservationService.CreateReservation(request);
+
+                Console.WriteLine($"✓ Reservation created successfully - ID: {reservation.Id}");
+
+                return Results.Ok(new 
+                { 
+                    success = true,
+                    message = "Reservation created successfully",
+                    reservation = new
+                    {
+                        id = reservation.Id,
+                        roomId = reservation.RoomId,
+                        seatId = reservation.SeatId,
+                        username = reservation.Username,
+                        startTime = reservation.StartTime,
+                        endTime = reservation.EndTime
+                    }
+                });
+            }
+            catch (InvalidOperationException ex)
+            {
+                Console.WriteLine($"✗ InvalidOperationException: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
+                return Results.BadRequest(new { error = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"✗ Exception Type: {ex.GetType().Name}");
+                Console.WriteLine($"✗ Message: {ex.Message}");
+                Console.WriteLine($"✗ Stack trace: {ex.StackTrace}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"✗ Inner exception: {ex.InnerException.Message}");
+                    Console.WriteLine($"✗ Inner stack: {ex.InnerException.StackTrace}");
+                }
+                return Results.Problem(detail: ex.Message, statusCode: 500);
+            }
+        });
+
+        app.UseDefaultFiles();
+        app.UseStaticFiles();
+
+        await app.RunAsync();
     }
-    
-        
 }
