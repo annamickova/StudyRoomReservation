@@ -1,3 +1,4 @@
+using StudyRoomReservation.Concurrency;
 using StudyRoomReservation.Repository;
 
 namespace StudyRoomReservation.Services;
@@ -29,11 +30,27 @@ public class ReservationService
     /// <exception cref="InvalidOperationException">
     /// Thrown if the seat is already reserved during the requested time or room/seat does not exist
     /// </exception>
-    public void CreateReservation(Reservation reservation)
+    public Reservation CreateReservation(ReservationRequest request)
     {
-        if (reservation == null) throw new ArgumentNullException(nameof(reservation));
-        var seat = _roomService.GetSeat(reservation.RoomId, reservation.SeatId);
+        var rooms = _roomService.GetAllRooms();
+        var room = rooms.FirstOrDefault(r => r.Seats.Any(s => s.Id == request.SeatId));
+        
+        if (room == null)
+            throw new InvalidOperationException($"Seat with ID {request.SeatId} not found in any room");
+        
+        if (request.RoomId == 0)
+            request.RoomId = room.Id;
+
+        var reservation = new Reservation(
+            request.RoomId,
+            request.SeatId,
+            request.Username,
+            request.StartTime,
+            request.EndTime
+        );
+
         _repository.AddReservation(reservation);
+        return reservation;
     }
 
     /// <summary>
