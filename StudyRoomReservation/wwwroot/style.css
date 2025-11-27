@@ -1,0 +1,34 @@
+.room {
+    margin-bottom: 30px;
+    border: 1px solid #ccc;
+    padding: 10px;
+}
+
+.room h2 {
+    margin-bottom: 10px;
+}
+
+.seat {
+    display: inline-block;
+    width: 50px;
+    height: 50px;
+    border: 1px solid black;
+    margin: 5px;
+    text-align: center;
+    line-height: 50px;
+    cursor: pointer;
+    user-select: none;
+    border-radius: 5px;
+    font-weight: bold;
+}
+
+.seat.reserved {
+    background-color: red;
+    color: white;
+    cursor: not-allowed;
+}
+
+.seat.available {
+    background-color: green;
+    color: white;
+}
