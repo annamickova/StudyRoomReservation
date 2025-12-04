@@ -108,7 +108,7 @@ Make `appsettings.json` with your MySQL credentials:
 dotnet run
 ```
 
-Go to `http://localhost:5000`
+Go to `http://localhost:8080`
 
 ## How to use
 
@@ -116,9 +116,6 @@ Go to `http://localhost:5000`
 - Pick a time range first
 - Then click on any seat to reserve it
 - Enter your name
-
-### Testing threads
-Go to `http://localhost:5000/test-threads.html` and click "Send 10 Requests (Parallel)" to see multiple threads working at the same time.
 
 ## API
 
@@ -140,7 +137,7 @@ POST /api/reserve
 }
 ```
 
-## Technical stuff
+## Technical
 
 - ASP.NET Core with C#
 - MySQL database

@@ -1,11 +1,8 @@
-﻿using StudyRoomReservation.Concurrency;
-using StudyRoomReservation.Repository;
-using StudyRoomReservation.Services;
+﻿namespace StudyRoomReservation;
+using Concurrency;
+using Repository;
+using Services;
 using Microsoft.AspNetCore.Mvc;
-using System.Text.Json;
-
-namespace StudyRoomReservation;
-
 class Program
 {
     static async Task Main(string[] args)
@@ -25,7 +22,7 @@ class Program
         
         var processor = app.Services.GetRequiredService<ReservationProcessor>();
         processor.Start();
-        Console.WriteLine("✓ Reservation processor started");
+        Console.WriteLine("Reservation processor started");
         
         app.MapGet("/api/rooms", ([FromServices] RoomService roomService) =>
         {
@@ -46,12 +43,12 @@ class Program
         {
             try
             {
-                Console.WriteLine("=== Reservation Request Received ===");
+                Console.WriteLine("Reservation Request Received");
                 Console.WriteLine($"Request object is null: {request == null}");
 
                 if (request == null)
                 {
-                    Console.WriteLine("✗ Request is null");
+                    Console.WriteLine("Request is null");
                     return Results.BadRequest(new { error = "Request body is null" });
                 }
 
@@ -60,31 +57,30 @@ class Program
                 Console.WriteLine($"Username: '{request.Username}'");
                 Console.WriteLine($"StartTime: {request.StartTime}");
                 Console.WriteLine($"EndTime: {request.EndTime}");
-
-                // Validation
+                
                 if (string.IsNullOrWhiteSpace(request.Username))
                 {
-                    Console.WriteLine("✗ Username is missing or empty");
+                    Console.WriteLine("Username is missing or empty");
                     return Results.BadRequest(new { error = "Username is required" });
                 }
 
                 if (request.SeatId <= 0)
                 {
-                    Console.WriteLine($"✗ Invalid SeatId: {request.SeatId}");
+                    Console.WriteLine($"Invalid SeatId: {request.SeatId}");
                     return Results.BadRequest(new { error = "Valid SeatId is required" });
                 }
 
                 if (request.StartTime >= request.EndTime)
                 {
-                    Console.WriteLine($"✗ StartTime ({request.StartTime}) >= EndTime ({request.EndTime})");
+                    Console.WriteLine($"StartTime ({request.StartTime}) >= EndTime ({request.EndTime})");
                     return Results.BadRequest(new { error = "StartTime must be before EndTime" });
                 }
 
-                Console.WriteLine("✓ Validation passed, creating reservation...");
+                Console.WriteLine("Validation passed, creating reservation...");
                 
                 var reservation = reservationService.CreateReservation(request);
 
-                Console.WriteLine($"✓ Reservation created successfully - ID: {reservation.Id}");
+                Console.WriteLine($"Reservation created successfully - ID: {reservation.Id}");
 
                 return Results.Ok(new 
                 { 
@@ -103,19 +99,19 @@ class Program
             }
             catch (InvalidOperationException ex)
             {
-                Console.WriteLine($"✗ InvalidOperationException: {ex.Message}");
+                Console.WriteLine($"InvalidOperationException: {ex.Message}");
                 Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 return Results.BadRequest(new { error = ex.Message });
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"✗ Exception Type: {ex.GetType().Name}");
-                Console.WriteLine($"✗ Message: {ex.Message}");
-                Console.WriteLine($"✗ Stack trace: {ex.StackTrace}");
+                Console.WriteLine($"Exception Type: {ex.GetType().Name}");
+                Console.WriteLine($"Message: {ex.Message}");
+                Console.WriteLine($"Stack trace: {ex.StackTrace}");
                 if (ex.InnerException != null)
                 {
-                    Console.WriteLine($"✗ Inner exception: {ex.InnerException.Message}");
-                    Console.WriteLine($"✗ Inner stack: {ex.InnerException.StackTrace}");
+                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                    Console.WriteLine($"Inner stack: {ex.InnerException.StackTrace}");
                 }
                 return Results.Problem(detail: ex.Message, statusCode: 500);
             }
