@@ -7,119 +7,130 @@ class Program
 {
     static async Task Main(string[] args)
     {
-        DatabaseConfig.Load();
-        var builder = WebApplication.CreateBuilder(args);
-        
-        builder.Services.AddSingleton<RoomRepository>();
-        builder.Services.AddSingleton<ReservationRepository>();
-        
-        builder.Services.AddSingleton<RoomService>();
-        builder.Services.AddSingleton<ReservationService>();
-        
-        builder.Services.AddSingleton<ReservationProcessor>();
+        Logger.Configure();
 
-        var app = builder.Build();
-        
-        var processor = app.Services.GetRequiredService<ReservationProcessor>();
-        processor.Start();
-        Console.WriteLine("Reservation processor started");
-        
-        app.MapGet("/api/rooms", ([FromServices] RoomService roomService) =>
+        try
         {
-            var rooms = roomService.GetAllRooms();
-            var result = rooms.Select(r => new
+            DatabaseConfig.Load();
+            
+            var builder = WebApplication.CreateBuilder(args);
+            
+            builder.Services.AddSingleton<RoomRepository>();
+            builder.Services.AddSingleton<ReservationRepository>();
+            
+            builder.Services.AddSingleton<RoomService>();
+            builder.Services.AddSingleton<ReservationService>();
+            
+            builder.Services.AddSingleton<ReservationProcessor>();
+
+            var app = builder.Build();
+            
+            var processor = app.Services.GetRequiredService<ReservationProcessor>();
+            processor.Start();
+            Logger.Info("Reservation processor started");
+            
+            app.MapGet("/api/rooms", ([FromServices] RoomService roomService) =>
             {
-                id = r.Id,
-                name = r.Name,
-                capacity = r.Capacity,
-                seats = (r.Seats ?? new List<Seat>()).Select(s => new { id = s.Id }).ToList()
-            }).ToList();
+                var rooms = roomService.GetAllRooms();
+                var result = rooms.Select(r => new
+                {
+                    id = r.Id,
+                    name = r.Name,
+                    capacity = r.Capacity,
+                    seats = r.Seats.Select(s => new { id = s.Id }).ToList()
+                }).ToList();
 
-            Console.WriteLine("JSON to send: " + System.Text.Json.JsonSerializer.Serialize(result));
-            return Results.Ok(result);
-        });
-        
-        app.MapPost("/api/reserve", async (ReservationRequest request, ReservationService reservationService) =>
-        {
-            try
+                Logger.Debug("JSON to send: " + System.Text.Json.JsonSerializer.Serialize(result));
+                return Results.Ok(result);
+            });
+            
+            app.MapPost("/api/reserve", async (ReservationRequest request, ReservationService reservationService) =>
             {
-                Console.WriteLine("Reservation Request Received");
-                Console.WriteLine($"Request object is null: {request == null}");
-
-                if (request == null)
+                try
                 {
-                    Console.WriteLine("Request is null");
-                    return Results.BadRequest(new { error = "Request body is null" });
-                }
+                    Logger.Info("Reservation Request Received");
+                    Logger.Debug($"Request object null: {request == null}");
 
-                Console.WriteLine($"RoomId: {request.RoomId}");
-                Console.WriteLine($"SeatId: {request.SeatId}");
-                Console.WriteLine($"Username: '{request.Username}'");
-                Console.WriteLine($"StartTime: {request.StartTime}");
-                Console.WriteLine($"EndTime: {request.EndTime}");
-                
-                if (string.IsNullOrWhiteSpace(request.Username))
-                {
-                    Console.WriteLine("Username is missing or empty");
-                    return Results.BadRequest(new { error = "Username is required" });
-                }
-
-                if (request.SeatId <= 0)
-                {
-                    Console.WriteLine($"Invalid SeatId: {request.SeatId}");
-                    return Results.BadRequest(new { error = "Valid SeatId is required" });
-                }
-
-                if (request.StartTime >= request.EndTime)
-                {
-                    Console.WriteLine($"StartTime ({request.StartTime}) >= EndTime ({request.EndTime})");
-                    return Results.BadRequest(new { error = "StartTime must be before EndTime" });
-                }
-
-                Console.WriteLine("Validation passed, creating reservation...");
-                
-                var reservation = reservationService.CreateReservation(request);
-
-                Console.WriteLine($"Reservation created successfully - ID: {reservation.Id}");
-
-                return Results.Ok(new 
-                { 
-                    success = true,
-                    message = "Reservation created successfully",
-                    reservation = new
+                    if (request == null)
                     {
-                        id = reservation.Id,
-                        roomId = reservation.RoomId,
-                        seatId = reservation.SeatId,
-                        username = reservation.Username,
-                        startTime = reservation.StartTime,
-                        endTime = reservation.EndTime
+                        Logger.Warning("Request is null");
+                        return Results.BadRequest(new { error = "Request body is null" });
                     }
-                });
-            }
-            catch (InvalidOperationException ex)
-            {
-                Console.WriteLine($"InvalidOperationException: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                return Results.BadRequest(new { error = ex.Message });
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine($"Exception Type: {ex.GetType().Name}");
-                Console.WriteLine($"Message: {ex.Message}");
-                Console.WriteLine($"Stack trace: {ex.StackTrace}");
-                if (ex.InnerException != null)
-                {
-                    Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
-                    Console.WriteLine($"Inner stack: {ex.InnerException.StackTrace}");
+
+                    Logger.Debug($"RoomId: {request.RoomId}");
+                    Logger.Debug($"SeatId: {request.SeatId}");
+                    Logger.Debug($"Username: '{request.Username}'");
+                    Logger.Debug($"StartTime: {request.StartTime}");
+                    Logger.Debug($"EndTime: {request.EndTime}");
+                    
+                    if (string.IsNullOrWhiteSpace(request.Username))
+                    {
+                        Logger.Warning("Username is missing or empty");
+                        return Results.BadRequest(new { error = "Username is required" });
+                    }
+
+                    if (request.SeatId <= 0)
+                    {
+                        Logger.Warning($"Invalid SeatId: {request.SeatId}");
+                        return Results.BadRequest(new { error = "Valid SeatId is required" });
+                    }
+
+                    if (request.StartTime >= request.EndTime)
+                    {
+                        Logger.Warning($"StartTime ({request.StartTime}) >= EndTime ({request.EndTime})");
+                        return Results.BadRequest(new { error = "StartTime must be before EndTime" });
+                    }
+
+                    Logger.Info("Validation passed, creating reservation.");
+                    
+                    var reservation = reservationService.CreateReservation(request);
+
+                    Logger.Info($"Reservation {reservation.Id} created successfully");
+
+                    return Results.Ok(new 
+                    { 
+                        success = true,
+                        message = "Reservation created successfully",
+                        reservation = new
+                        {
+                            id = reservation.Id,
+                            roomId = reservation.RoomId,
+                            seatId = reservation.SeatId,
+                            username = reservation.Username,
+                            startTime = reservation.StartTime,
+                            endTime = reservation.EndTime
+                        }
+                    });
                 }
-                return Results.Problem(detail: ex.Message, statusCode: 500);
-            }
-        });
+                catch (InvalidOperationException ex)
+                {
+                    Logger.Error($"Failed to create reservation for {request.Username}"); 
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Exception Type: {ex.GetType().Name}");
+                    Logger.Error($"Message: {ex.Message}");
+                    Logger.Error($"StackTrace: {ex.StackTrace}");
+                    if (ex.InnerException != null)
+                    {
+                        Logger.Error($"Inner: {ex.InnerException.Message}");
+                    }
 
-        app.UseDefaultFiles();
-        app.UseStaticFiles();
+                    return Results.Problem(detail: ex.Message, statusCode: 500);
+                }
+            });
 
-        await app.RunAsync();
+            app.UseDefaultFiles();
+            app.UseStaticFiles();
+
+            await app.RunAsync(); 
+        }
+        catch (Exception)
+        {
+            Logger.Error("Application failed to start");
+            throw;
+        }
+        
     }
 }

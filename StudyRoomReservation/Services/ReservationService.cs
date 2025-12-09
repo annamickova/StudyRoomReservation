@@ -32,25 +32,42 @@ public class ReservationService
     /// </exception>
     public Reservation CreateReservation(ReservationRequest request)
     {
-        var rooms = _roomService.GetAllRooms();
-        var room = rooms.FirstOrDefault(r => r.Seats.Any(s => s.Id == request.SeatId));
-        
-        if (room == null)
-            throw new InvalidOperationException($"Seat with ID {request.SeatId} not found in any room");
-        
-        if (request.RoomId == 0)
-            request.RoomId = room.Id;
+        Logger.Debug($"Creating reservation for seat {request.SeatId}");
+        try
+        {
+            var rooms = _roomService.GetAllRooms();
+                    var room = rooms.FirstOrDefault(r => r.Seats.Any(s => s.Id == request.SeatId));
 
-        var reservation = new Reservation(
-            request.RoomId,
-            request.SeatId,
-            request.Username,
-            request.StartTime,
-            request.EndTime
-        );
+                    if (room == null)
+                    {
+                        Logger.Warning($"No room found for seat {request.SeatId}");
+                        throw new InvalidOperationException($"Seat with ID {request.SeatId} not found in any room");
 
-        _repository.AddReservation(reservation);
-        return reservation;
+                    }
+                        
+                    if (request.RoomId == 0)
+                        request.RoomId = room.Id;
+                    
+                    Logger.Info($"Found seat in room {room.Name}");
+
+                    var reservation = new Reservation(
+                        request.RoomId,
+                        request.SeatId,
+                        request.Username,
+                        request.StartTime,
+                        request.EndTime
+                    );
+
+                    _repository.AddReservation(reservation);
+                    Logger.Info($"Reservation {reservation.Id} saved to database");
+
+                    return reservation;
+        }
+        catch (Exception e)
+        {
+            Logger.Error($"Failed to create reservation for seat {request.SeatId}");
+            throw;
+        }
     }
 
     /// <summary>

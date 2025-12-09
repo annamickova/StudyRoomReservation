@@ -1,0 +1,20 @@
+[2025-12-09 15:36:04] [INFO] Reservation processor started
+[2025-12-09 17:04:26] [INFO] Starting 4 worker threads...
+[2025-12-09 17:04:26] [INFO] Worker 1 started.
+[2025-12-09 17:04:26] [INFO] Worker 2 started.
+[2025-12-09 17:04:26] [INFO] Worker 3 started.
+[2025-12-09 17:04:26] [INFO] Worker 4 started.
+[2025-12-09 17:04:26] [INFO] Reservation processor started
+[2025-12-09 17:04:54] [DEBUG] JSON to send: [{"id":16,"name":"Room A","capacity":5,"seats":[{"id":1},{"id":2},{"id":3},{"id":4},{"id":5}]},{"id":17,"name":"Room B","capacity":8,"seats":[{"id":6},{"id":7},{"id":8},{"id":9},{"id":10},{"id":11},{"id":12},{"id":13}]},{"id":18,"name":"Room C","capacity":10,"seats":[{"id":14},{"id":15},{"id":16},{"id":17},{"id":18},{"id":19},{"id":20},{"id":21},{"id":22},{"id":23}]}]
+[2025-12-09 17:05:05] [INFO] Reservation Request Received
+[2025-12-09 17:05:05] [DEBUG] Request object null: False
+[2025-12-09 17:05:05] [DEBUG] RoomId: 17
+[2025-12-09 17:05:05] [DEBUG] SeatId: 8
+[2025-12-09 17:05:05] [DEBUG] Username: 'Anna'
+[2025-12-09 17:05:05] [DEBUG] StartTime: 10.12.2025 16:04:00
+[2025-12-09 17:05:05] [DEBUG] EndTime: 10.12.2025 17:04:00
+[2025-12-09 17:05:05] [INFO] Validation passed, creating reservation.
+[2025-12-09 17:05:05] [DEBUG] Creating reservation for seat 8
+[2025-12-09 17:05:05] [INFO] Found seat in room Room B
+[2025-12-09 17:05:05] [INFO] Reservation 25 saved to database
+[2025-12-09 17:05:05] [INFO] Reservation 25 created successfully

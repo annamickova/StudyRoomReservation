@@ -36,6 +36,8 @@ public class ReservationProcessor
     /// </summary>
     public void Start()
     {
+        Logger.Info($"Starting {_workerCount} worker threads...");
+        
         for (int i = 0; i < _workerCount; i++)
         {
             var worker = new Thread(ProcessQueue)
@@ -45,6 +47,7 @@ public class ReservationProcessor
             };
             _workers.Add(worker);
             worker.Start();
+            Logger.Info($"Worker {i + 1} started.");
         }
     }
     
@@ -59,13 +62,16 @@ public class ReservationProcessor
 
             while (_queue.TryDequeue(out var req))
             {
+                Logger.Info($"Processing request {req}");
                 try
                 {
                     ProcessRequest(req);
+                    Logger.Info("Request completed");
                 }
                 catch (Exception e)
                 {
                     req.Completion.SetException(e);
+                    Logger.Error("Failed to process request");
                 }
             }
         }
