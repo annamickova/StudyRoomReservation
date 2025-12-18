@@ -13,10 +13,18 @@ public class ReservationProcessor
     private readonly ConcurrentQueue<ReservationRequest> _queue = new();
     private readonly AutoResetEvent _signal = new(false);
     
-    private readonly int _workerCount = 4;
+    private readonly int _workerCount;
     private readonly List<Thread> _workers = new();
     public ReservationProcessor(ReservationService reservationService, RoomService roomService)
     {
+        var config = new ConfigurationBuilder()
+            .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+            .Build();
+
+        var dbSection = config.GetSection("Database");
+        if (!int.TryParse(dbSection["WorkerCount"], out var workerCount) || workerCount <= 0){
+            _workerCount = Environment.ProcessorCount;
+        }
         _reservationService = reservationService;
         _roomService = roomService;
     }
