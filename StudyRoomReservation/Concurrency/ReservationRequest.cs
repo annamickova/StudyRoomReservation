@@ -8,8 +8,10 @@ public class ReservationRequest
     public int RoomId { get; set; }
     public int SeatId { get; set; }
     public string Username { get; set; }
+    public int UserId { get; set; }
     public DateTime StartTime { get; set; }
     public DateTime EndTime { get; set; }
+    public bool IsConfirmed { get; set; } = false;
     
     public TaskCompletionSource<Reservation> Completion { get; set; } = new();
 
