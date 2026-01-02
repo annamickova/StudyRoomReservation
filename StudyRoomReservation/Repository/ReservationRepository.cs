@@ -24,10 +24,9 @@ public class ReservationRepository
 
         using var command = new MySqlCommand(@"
         SELECT COUNT(*) FROM reservation 
-        WHERE room_id=@room_id AND seat_id=@seat_id 
+        WHERE seat_id=@seat_id 
           AND ((start_time < @end_time) AND (end_time > @start_time))", conn);
 
-        command.Parameters.AddWithValue("@room_id", reservation.RoomId);
         command.Parameters.AddWithValue("@seat_id", reservation.SeatId);
         command.Parameters.AddWithValue("@start_time", startTime);
         command.Parameters.AddWithValue("@end_time", endTime);
@@ -38,17 +37,19 @@ public class ReservationRepository
 
         
         using var insertCmd = new MySqlCommand(@"
-            INSERT INTO reservation (room_id, seat_id, username, start_time, end_time) 
-            VALUES (@room_id, @seat_id, @username, @start, @end)", conn);
-        insertCmd.Parameters.AddWithValue("@room_id", reservation.RoomId);
+        INSERT INTO reservation (seat_id, user_id, start_time, end_time, is_confirmed) 
+        VALUES (@seat_id, @user_id, @start, @end, @is_confirmed)", conn);
+    
         insertCmd.Parameters.AddWithValue("@seat_id", reservation.SeatId);
-        insertCmd.Parameters.AddWithValue("@username", reservation.Username);
+        insertCmd.Parameters.AddWithValue("@user_id", reservation.UserId);
         insertCmd.Parameters.AddWithValue("@start", reservation.StartTime);
         insertCmd.Parameters.AddWithValue("@end", reservation.EndTime);
+        insertCmd.Parameters.AddWithValue("@is_confirmed", reservation.IsConfirmed);
 
         insertCmd.ExecuteNonQuery();
         
         reservation.Id = (int)insertCmd.LastInsertedId;
+        Logger.Info($"Reservation ID {reservation.Id} saved to database");
     }
     
     /// <summary>
@@ -64,18 +65,18 @@ public class ReservationRepository
         conn.Open();
 
         using var cmd = new MySqlCommand(
-            "SELECT id, room_id, seat_id, username, start_time, end_time FROM reservation WHERE room_id=@room_id", conn);
+            "SELECT id, seat_id, user_id, start_time, end_time, is_confirmed FROM reservation WHERE room_id=@room_id", conn);
         cmd.Parameters.AddWithValue("@room_id", roomId);
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
             list.Add(new Reservation(
-                reader.GetInt32("room_id"),
-                 reader.GetInt32("seat_id"),
-                reader.GetString("username"),
+                reader.GetInt32("seat_id"),
+                reader.GetInt32("user_id"),
                 reader.GetDateTime("start_time"), 
-                reader.GetDateTime("end_time")));
+                reader.GetDateTime("end_time"),
+                reader.GetBoolean("is_confirmed")));
         }
 
         return list;
@@ -92,17 +93,17 @@ public class ReservationRepository
         conn.Open();
 
         using var cmd = new MySqlCommand(
-            "SELECT id, room_id, seat_id, username, start_time, end_time FROM reservation", conn);
+            "SELECT id, seat_id, user_id, start_time, end_time, is_confirmed FROM reservation", conn);
 
         using var reader = cmd.ExecuteReader();
         while (reader.Read())
         {
             list.Add(new Reservation(
-                reader.GetInt32("room_id"), 
                 reader.GetInt32("seat_id"),
-                reader.GetString("username"),
+                reader.GetInt32("user_id"),
                 reader.GetDateTime("start_time"), 
-                reader.GetDateTime("end_time")));
+                reader.GetDateTime("end_time"),
+                reader.GetBoolean("is_confirmed")));
         }
 
         return list;
