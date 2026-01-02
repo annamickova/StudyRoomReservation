@@ -10,16 +10,18 @@ public class ReservationService
 {
     private readonly RoomService _roomService;
     private readonly ReservationRepository _repository;
+    private readonly UserRepository _userRepository;
     
     /// <summary>
     /// Initializes a new instance of the ReservationService.
     /// </summary>
     /// <param name="roomService">Room service for validating rooms and seats</param>
     /// <param name="repository">Repository for persistence</param>
-    public ReservationService(RoomService roomService, ReservationRepository repository)
+    public ReservationService(RoomService roomService, ReservationRepository repository, UserRepository userRepository)
     {
         _roomService = roomService ?? throw new ArgumentNullException(nameof(roomService));
         _repository = repository ?? throw new ArgumentNullException(nameof(repository));
+        _userRepository = userRepository ?? throw new ArgumentNullException(nameof(userRepository));
     }
 
     /// <summary>
@@ -35,6 +37,20 @@ public class ReservationService
         Logger.Debug($"Creating reservation for seat {request.SeatId}");
         try
         {
+            var user = _userRepository.GetUserByUsername(request.Username);
+            if (user == null)
+            {
+                user = new User
+                {
+                    Username = request.Username,
+                    Role = UserRole.STUDENT
+                };
+                user.Id = _userRepository.AddUser(user);
+                Logger.Info($"Created new user: {user.Username}");
+            }
+
+            request.UserId = user.Id;
+            
             var rooms = _roomService.GetAllRooms();
                     var room = rooms.FirstOrDefault(r => r.Seats.Any(s => s.Id == request.SeatId));
 
@@ -51,11 +67,11 @@ public class ReservationService
                     Logger.Info($"Found seat in room {room.Name}");
 
                     var reservation = new Reservation(
-                        request.RoomId,
                         request.SeatId,
-                        request.Username,
+                        request.UserId,
                         request.StartTime,
-                        request.EndTime
+                        request.EndTime,
+                        request.IsConfirmed
                     );
 
                     _repository.AddReservation(reservation);
