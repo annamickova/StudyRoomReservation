@@ -14,7 +14,8 @@ class Program
             DatabaseConfig.Load();
             
             var builder = WebApplication.CreateBuilder(args);
-            
+            builder.Services.AddSingleton<UserRepository>();
+
             builder.Services.AddSingleton<RoomRepository>();
             builder.Services.AddSingleton<ReservationRepository>();
             
