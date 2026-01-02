@@ -7,7 +7,7 @@ public class UnitTests
     [Fact]
     public void Room_Constructor_CreatesCorrectNumberOfSeats()
     {
-        var room = new Room("Test Room", 5);
+        var room = new Room("Test Room", 5, 3);
         Assert.Equal(5, room.Seats.Count);
         Assert.Equal("Test Room", room.Name);
     }
@@ -15,13 +15,13 @@ public class UnitTests
     [Fact]
     public void Room_Constructor_ThrowsException_WhenNameIsEmpty()
     {
-        Assert.Throws<ArgumentException>(() => new Room("", 5));
+        Assert.Throws<ArgumentException>(() => new Room("", 5, 3));
     }
 
     [Fact]
     public void Room_Constructor_ThrowsException_WhenCapacityIsZero()
     {
-        Assert.Throws<ArgumentException>(() => new Room("Test Room", 0));
+        Assert.Throws<ArgumentException>(() => new Room("Test Room", 0, 3));
     }
 
     [Fact]
@@ -30,7 +30,7 @@ public class UnitTests
         var startTime = DateTime.Now;
         var endTime = startTime.AddHours(2);
 
-        var reservation = new Reservation(1, 2, "jan", startTime, endTime);
+        var reservation = new Reservation(1, 2, startTime, endTime, true);
 
         Assert.Equal(1, reservation.RoomId);
         Assert.Equal(2, reservation.SeatId);

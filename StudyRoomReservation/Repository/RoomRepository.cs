@@ -57,7 +57,7 @@ public class RoomRepository
         Room? room = null;
         
         using (var cmd = new MySqlCommand(
-                   "SELECT id, name, capacity FROM room WHERE id=@id", conn))
+                   "SELECT id, name, capacity, floor FROM room WHERE id=@id", conn))
         {
             cmd.Parameters.AddWithValue("@id", id);
 
@@ -69,14 +69,18 @@ public class RoomRepository
                     Id = reader.GetInt32("id"),
                     Name = reader.GetString("name"),
                     Capacity = reader.GetInt32("capacity"),
-                    Seats = new List<Seat>()
+                    Floor = reader.IsDBNull("floor") ? null : reader.GetInt32("floor"),
+                    Seats = new List<Seat>(),
+                    Equipment = new List<Equipment>()
                 };
             }
         }
 
         if (room == null) return null;
+        
+        // Get seats
         using (var seatCmd = new MySqlCommand(
-                   "SELECT id, is_reserved, reserved_by FROM seat WHERE room_id=@room_id", conn))
+                   "SELECT id FROM seat WHERE room_id=@room_id", conn))
         {
             seatCmd.Parameters.AddWithValue("@room_id", id);
 
@@ -85,14 +89,35 @@ public class RoomRepository
             {
                 room.Seats.Add(new Seat
                 {
-                    Id = seatReader.GetInt32("id")
+                    Id = seatReader.GetInt32("id"),
+                    RoomId = id
+                });
+            }
+        }
+        
+        // Get equipment
+        using (var equipCmd = new MySqlCommand(@"
+            SELECT e.id, e.name 
+            FROM room_equipment re
+            JOIN equipment e ON re.equipment_id = e.id
+            WHERE re.room_id = @room_id", conn))
+        {
+            equipCmd.Parameters.AddWithValue("@room_id", id);
+
+            using var equipReader = equipCmd.ExecuteReader();
+            while (equipReader.Read())
+            {
+                room.Equipment.Add(new Equipment
+                {
+                    Id = equipReader.GetInt32("id"),
+                    Name = equipReader.GetString("name")
                 });
             }
         }
 
         return room;
     }
-
+    
     
     /// <summary>
     /// Gets list of all rooms and information about them.
@@ -104,7 +129,7 @@ public class RoomRepository
         using var conn = new MySqlConnection(DatabaseConfig.ConnectionString);
         conn.Open();
         
-        using (var cmd = new MySqlCommand("SELECT id, name, capacity FROM room", conn))
+        using (var cmd = new MySqlCommand("SELECT id, name, capacity, floor FROM room", conn))
         using (var reader = cmd.ExecuteReader())
         {
             while (reader.Read())
@@ -114,7 +139,9 @@ public class RoomRepository
                     Id = reader.GetInt32("id"),
                     Name = reader.GetString("name"),
                     Capacity = reader.GetInt32("capacity"),
-                    Seats = new List<Seat>()
+                    Floor = reader.IsDBNull("floor") ? null : reader.GetInt32("floor"),
+                    Seats = new List<Seat>(),
+                    Equipment = new List<Equipment>()
                 });
             }
         }
@@ -135,10 +162,36 @@ public class RoomRepository
             }
         }
         
+        var equipmentMap = new Dictionary<int, List<Equipment>>();
+        using (var equipCmd = new MySqlCommand(@"
+            SELECT re.room_id, e.id, e.name 
+            FROM room_equipment re
+            JOIN equipment e ON re.equipment_id = e.id", conn))
+        using (var equipReader = equipCmd.ExecuteReader())
+        {
+            while (equipReader.Read())
+            {
+                int roomId = equipReader.GetInt32("room_id");
+                var equipment = new Equipment
+                {
+                    Id = equipReader.GetInt32("id"),
+                    Name = equipReader.GetString("name")
+                };
+
+                if (!equipmentMap.ContainsKey(roomId))
+                    equipmentMap[roomId] = new List<Equipment>();
+
+                equipmentMap[roomId].Add(equipment);
+            }
+        }
+        
         foreach (var room in rooms)
         {
             if (seatMap.ContainsKey(room.Id))
                 room.Seats = seatMap[room.Id];
+            
+            if (equipmentMap.ContainsKey(room.Id))
+                room.Equipment = equipmentMap[room.Id];
         }
 
         return rooms;
