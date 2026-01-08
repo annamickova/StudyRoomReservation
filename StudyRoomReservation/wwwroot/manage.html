@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Manage Reservations</title>
+    <link rel="stylesheet" href="manage.css">
+</head>
+<body>
+<div class="manage-container">
+    <div class="header">
+        <h1>Manage Reservations</h1>
+        <a href="/" class="back-link">Back to Booking</a>
+    </div>
+
+    <div class="filter-section">
+        <label for="filterUser">Filter by username:</label>
+        <input type="text" id="filterUser" placeholder="Enter username to filter...">
+    </div>
+
+    <table class="reservations-table" id="reservationsTable">
+        <thead>
+        <tr>
+            <th>ID</th>
+            <th>User</th>
+            <th>Role</th>
+            <th>Room</th>
+            <th>Seat</th>
+            <th>Start Time</th>
+            <th>End Time</th>
+            <th>Status</th>
+            <th>Actions</th>
+        </tr>
+        </thead>
+        <tbody id="reservationsBody">
+        </tbody>
+    </table>
+
+    <div id="noReservations" class="no-reservations" style="display: none;">
+        No reservations found.
+    </div>
+</div>
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h2>Edit Reservation</h2>
+        <label>Start Time:</label>
+        <input type="datetime-local" id="editStartTime">
+        <label>End Time:</label>
+        <input type="datetime-local" id="editEndTime">
+        <div class="modal-buttons">
+            <button class="btn-save" onclick="saveEdit()">Save</button>
+            <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+        </div>
+    </div>
+</div>
+<script src="manage.js"></script>
+</body>
+</html>
