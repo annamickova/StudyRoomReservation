@@ -47,31 +47,61 @@ document.addEventListener("DOMContentLoaded", () => {
 
             console.log("Data received from API:", data);
 
-            container.innerHTML = ""; // vyčistí formulář + staré místnosti
+            // ✅ Clear only previously rendered rooms
+            container.querySelectorAll(".room").forEach(r => r.remove());
 
             data.forEach(room => {
-                console.log("Rendering room:", room);
-
                 const roomDiv = document.createElement("div");
                 roomDiv.className = "room";
 
+                // Header
+                const header = document.createElement("div");
+                header.className = "room-header";
+
                 const title = document.createElement("h3");
                 title.innerText = `${room.name} (Capacity: ${room.capacity})`;
-                roomDiv.appendChild(title);
+                header.appendChild(title);
 
+                if (room.floor) {
+                    const floorInfo = document.createElement("span");
+                    floorInfo.className = "floor-info";
+                    floorInfo.innerText = `Floor ${room.floor}`;
+                    header.appendChild(floorInfo);
+                }
+
+                roomDiv.appendChild(header);
+
+                if (room.equipment.length > 0) {
+                    const equipmentDiv = document.createElement("div");
+                    equipmentDiv.className = "equipment-list";
+
+                    const equipmentTitle = document.createElement("h4");
+                    equipmentTitle.innerText = "Equipment:";
+                    equipmentDiv.appendChild(equipmentTitle);
+
+                    const ul = document.createElement("ul");
+                    room.equipment.forEach(e => {
+                        const li = document.createElement("li");
+                        li.className = "equipment-item";
+                        li.innerText = e.name;
+                        ul.appendChild(li);
+                    });
+
+                    equipmentDiv.appendChild(ul);
+                    roomDiv.appendChild(equipmentDiv);
+                }
+                
                 const seatsDiv = document.createElement("div");
                 seatsDiv.className = "seats";
 
-                (room.seats ?? []).forEach(seat => {
-                    const seatBtn = document.createElement("button");
-                    seatBtn.className = "seat";
-                    seatBtn.innerText = seat.id;
-
-                    seatBtn.addEventListener("click", () =>
+                room.seats.forEach(seat => {
+                    const btn = document.createElement("button");
+                    btn.className = "seat";
+                    btn.innerText = seat.id;
+                    btn.addEventListener("click", () =>
                         reserveSeat(room.id, seat.id)
                     );
-
-                    seatsDiv.appendChild(seatBtn);
+                    seatsDiv.appendChild(btn);
                 });
 
                 roomDiv.appendChild(seatsDiv);
