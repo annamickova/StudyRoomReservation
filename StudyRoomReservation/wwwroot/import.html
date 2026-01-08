@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Import CSV Data</title>
+    <link rel="stylesheet" href="import.css">
+</head>
+<body>
+<a href="/" class="back">Back to Home</a>
+
+<h1>Import Data from CSV</h1>
+
+<div class="section">
+    <h2>Import Rooms</h2>
+    <p>Paste CSV data below (format: name,capacity,floor)</p>
+
+    <div class="example">
+        Example:<br>
+        name,capacity,floor<br>
+        "Room A",10,1<br>
+        "Room B",8,2<br>
+        "Study Area",15,3
+    </div>
+
+    <textarea id="roomsCsv" placeholder="Paste CSV data here..."></textarea>
+    <br>
+    <button onclick="importRooms()">Import Rooms</button>
+    <div id="roomsResult"></div>
+</div>
+
+<div class="section">
+    <h2>Import Equipment</h2>
+    <p>Paste equipment names below (one per line)</p>
+
+    <div class="example">
+        Example:<br>
+        name<br>
+        Projector<br>
+        Whiteboard<br>
+        Computer<br>
+        Smart TV
+    </div>
+
+    <textarea id="equipmentCsv" placeholder="Paste equipment names here..."></textarea>
+    <br>
+    <button onclick="importEquipment()">Import Equipment</button>
+    <div id="equipmentResult"></div>
+</div>
+<script src="import_script.js"></script>
+</body>
+</html>
