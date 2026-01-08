@@ -23,6 +23,7 @@ class Program
             builder.Services.AddSingleton<ReservationService>();
             
             builder.Services.AddSingleton<ReservationProcessor>();
+            builder.Services.AddSingleton<ImportRepository>();
 
             var app = builder.Build();
             
@@ -38,7 +39,13 @@ class Program
                     id = r.Id,
                     name = r.Name,
                     capacity = r.Capacity,
-                    seats = r.Seats.Select(s => new { id = s.Id }).ToList()
+                    floor = r.Floor,
+                    seats = r.Seats.Select(s => new { id = s.Id }).ToList(),
+                    equipment = (r.Equipment ?? new List<Equipment>()).Select(e => new 
+                    { 
+                        id = e.Id, 
+                        name = e.Name 
+                    }).ToList()
                 }).ToList();
 
                 Logger.Debug("JSON to send: " + System.Text.Json.JsonSerializer.Serialize(result));
@@ -121,6 +128,138 @@ class Program
                     return Results.Problem(detail: ex.Message, statusCode: 500);
                 }
             });
+            
+            app.MapGet("/api/reservations", ([FromServices] ReservationRepository repository) =>
+            {
+                try
+                {
+                    Logger.Info("Fetching all reservations...");
+                    var reservations = repository.GetAllReservationsWithDetails();
+                    Logger.Info($"Retrieved {reservations.Count} reservations");
+                    return Results.Ok(reservations);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to get reservations: {ex.Message}");
+                    Console.WriteLine($"Full exception: {ex}");  // ← Add this for more detail
+                    return Results.Problem(ex.Message);
+                }
+            });
+                        
+            app.MapDelete("/api/reservations/{id:int}", (int id, [FromServices] ReservationRepository repository) =>
+            {
+                try
+                {
+                    var success = repository.DeleteReservation(id);
+                    if (success)
+                    {
+                        Logger.Info($"Deleted reservation {id}");
+                        return Results.Ok(new { message = "Reservation deleted successfully" });
+                    }
+                    else
+                    {
+                        Logger.Warning($"Reservation {id} not found");
+                        return Results.NotFound(new { error = "Reservation not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to delete reservation {id}");
+                    return Results.Problem(ex.Message);
+                }
+            });
+
+            app.MapPut("/api/reservations/{id:int}", (int id, [FromBody] UpdateReservationRequest request, [FromServices] ReservationRepository repository) =>
+            {
+                try
+                {
+                    var success = repository.UpdateReservation(id, request.StartTime, request.EndTime);
+                    if (success)
+                    {
+                        Logger.Info($"Updated reservation {id}");
+                        return Results.Ok(new { message = "Reservation updated successfully" });
+                    }
+                    else
+                    {
+                        Logger.Warning($"Reservation {id} not found");
+                        return Results.NotFound(new { error = "Reservation not found" });
+                    }
+                }
+                catch (InvalidOperationException ex)
+                {
+                    Logger.Warning($"Update conflict for reservation {id}: {ex.Message}");
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to update reservation {id}");
+                    return Results.Problem(ex.Message);
+                }
+            });
+            
+            app.MapPost("/api/reservations/{id:int}/confirm", (int id, [FromServices] ReservationRepository repository) =>
+            {
+                try
+                {
+                    var success = repository.ConfirmReservation(id);
+                    if (success)
+                    {
+                        Logger.Info($"Confirmed reservation {id}");
+                        return Results.Ok(new { message = "Reservation confirmed" });
+                    }
+                    else
+                    {
+                        return Results.NotFound(new { error = "Reservation not found" });
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to confirm reservation {id}");
+                    return Results.Problem(ex.Message);
+                }
+            });
+            
+            app.MapPost("/api/import/rooms", async (HttpRequest request, [FromServices] ImportRepository importRepo) =>
+            {
+                try
+                {
+                    using var reader = new StreamReader(request.Body);
+                    var csvContent = await reader.ReadToEndAsync();
+
+                    if (string.IsNullOrWhiteSpace(csvContent))
+                        return Results.BadRequest(new { error = "Empty CSV content" });
+
+                    int count = importRepo.ImportRoomsFromCsv(csvContent);
+        
+                    return Results.Ok(new { message = $"Imported {count} rooms", count });
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Room import failed");
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            });
+            
+            app.MapPost("/api/import/equipment", async (HttpRequest request, [FromServices] ImportRepository importRepo) =>
+            {
+                try
+                {
+                    using var reader = new StreamReader(request.Body);
+                    var csvContent = await reader.ReadToEndAsync();
+
+                    if (string.IsNullOrWhiteSpace(csvContent))
+                        return Results.BadRequest(new { error = "Empty CSV content" });
+
+                    int count = importRepo.ImportEquipmentFromCsv(csvContent);
+        
+                    return Results.Ok(new { message = $"Imported {count} equipment items", count });
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error("Equipment import failed");
+                    return Results.BadRequest(new { error = ex.Message });
+                }
+            });
 
             app.UseDefaultFiles();
             app.UseStaticFiles();
@@ -134,4 +273,10 @@ class Program
         }
         
     }
+}
+
+public class UpdateReservationRequest
+{
+    public DateTime StartTime { get; set; }
+    public DateTime EndTime { get; set; }
 }
