@@ -1,4 +1,15 @@
-using Xunit;
+/*
+ 
+ to run add to .csproj:
+ <PackageReference Include="Microsoft.NET.Test.Sdk" Version="18.0.1" />
+   <PackageReference Include="xunit" Version="2.9.3" />
+   <PackageReference Include="xunit.runner.visualstudio" Version="3.1.5">
+     <PrivateAssets>all</PrivateAssets>
+     <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+   </PackageReference>
+   <PackageReference Include="Moq" Version="4.20.72" />
+ 
+ using Xunit;
 
 namespace StudyRoomReservation.Tests;
 
@@ -66,4 +77,4 @@ public class UnitTests
 
         Assert.False(isValid);
     }
-}
+}*/
