@@ -24,6 +24,8 @@ class Program
             
             builder.Services.AddSingleton<ReservationProcessor>();
             builder.Services.AddSingleton<ImportRepository>();
+            
+            builder.Services.AddSingleton<ReportService>();
 
             var app = builder.Build();
             
@@ -31,25 +33,85 @@ class Program
             processor.Start();
             Logger.Info("Reservation processor started");
             
-            app.MapGet("/api/rooms", ([FromServices] RoomService roomService) =>
+            app.MapGet("/api/rooms", ([FromQuery] DateTime? startTime, [FromQuery] DateTime? endTime, [FromServices] RoomService roomService, [FromServices] ReservationRepository reservationRepository) =>
             {
-                var rooms = roomService.GetAllRooms();
-                var result = rooms.Select(r => new
+                try
                 {
-                    id = r.Id,
-                    name = r.Name,
-                    capacity = r.Capacity,
-                    floor = r.Floor,
-                    seats = r.Seats.Select(s => new { id = s.Id }).ToList(),
-                    equipment = (r.Equipment ?? new List<Equipment>()).Select(e => new 
-                    { 
-                        id = e.Id, 
-                        name = e.Name 
-                    }).ToList()
-                }).ToList();
-
-                Logger.Debug("JSON to send: " + System.Text.Json.JsonSerializer.Serialize(result));
-                return Results.Ok(result);
+                    Logger.Info($"GET /api/rooms called with startTime={startTime}, endTime={endTime}");
+                    
+                    if (!startTime.HasValue || !endTime.HasValue)
+                    {
+                        Logger.Debug("No time range provided");
+                        var rooms = roomService.GetAllRooms();
+                        var result = rooms.Select(r => new
+                        {
+                            id = r.Id,
+                            name = r.Name,
+                            capacity = r.Capacity,
+                            floor = r.Floor,
+                            seats = r.Seats.Select(s => new { id = s.Id, isReserved = false }).ToList(),
+                            equipment = r.Equipment.Select(e => new { id = e.Id, name = e.Name }).ToList()
+                        }).ToList();
+                        
+                        var json = System.Text.Json.JsonSerializer.Serialize(result);
+                        Logger.Debug($"Returning rooms without time filter: {json}");
+                        return Results.Ok(result);
+                    }
+                    
+                    Logger.Info("Fetching reservations for time range...");
+                    var reservations = reservationRepository.GetReservationsByTimeRange(startTime.Value, endTime.Value);
+                    Logger.Info($"Found {reservations.Count} reservations");
+                    
+                    foreach (var res in reservations)
+                    {
+                        Logger.Debug($"Reservation: seatId={res.seatId}, roomId={res.roomId}");
+                    }
+                    
+                    var rooms2 = roomService.GetAllRooms();
+                    Logger.Info($"Loaded {rooms2.Count} rooms");
+                    
+                    var result2 = rooms2.Select(r => 
+                    {
+                        Logger.Debug($"Processing Room {r.Id} with {r.Seats.Count} seats");
+                        
+                        return new
+                        {
+                            id = r.Id,
+                            name = r.Name,
+                            capacity = r.Capacity,
+                            floor = r.Floor,
+                            seats = r.Seats.Select(s => 
+                            {
+                                var isReserved = reservations.Any(res => 
+                                    (int)res.seatId == s.Id && (int)res.roomId == r.Id);
+                                
+                                Logger.Debug($"Seat {s.Id} in Room {r.Id}: isReserved={isReserved}");
+                                
+                                return new 
+                                { 
+                                    id = s.Id,
+                                    isReserved = isReserved
+                                };
+                            }).ToList(),
+                            equipment = (r.Equipment ?? new List<Equipment>()).Select(e => new 
+                            { 
+                                id = e.Id, 
+                                name = e.Name 
+                            }).ToList()
+                        };
+                    }).ToList();
+                    
+                    var json2 = System.Text.Json.JsonSerializer.Serialize(result2);
+                    Logger.Info($"Returning rooms with reservations: {json2.Substring(0, Math.Min(500, json2.Length))}...");
+                    
+                    return Results.Ok(result2);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to get rooms: {ex.Message}");
+                    Console.WriteLine(ex);
+                    return Results.Problem(ex.Message);
+                }
             });
             
             app.MapPost("/api/reserve", async (ReservationRequest request, ReservationService reservationService) =>
@@ -141,7 +203,7 @@ class Program
                 catch (Exception ex)
                 {
                     Logger.Error($"Failed to get reservations: {ex.Message}");
-                    Console.WriteLine($"Full exception: {ex}");  // ← Add this for more detail
+                    Console.WriteLine($"Full exception: {ex}");
                     return Results.Problem(ex.Message);
                 }
             });
@@ -260,6 +322,22 @@ class Program
                     return Results.BadRequest(new { error = ex.Message });
                 }
             });
+            
+            app.MapGet("/api/report", ([FromServices] ReportService reportService) =>
+            {
+                try
+                {
+                    Logger.Info("Generating summary report...");
+                    var report = reportService.GetReservationSummaryReport();
+                    Logger.Info("Report generated successfully");
+                    return Results.Ok(report);
+                }
+                catch (Exception ex)
+                {
+                    Logger.Error($"Failed to generate report: {ex.Message}");
+                    return Results.Problem(ex.Message);
+                }
+            });
 
             app.UseDefaultFiles();
             app.UseStaticFiles();
@@ -271,7 +349,6 @@ class Program
             Logger.Error("Application failed to start");
             throw;
         }
-        
     }
 }
 
