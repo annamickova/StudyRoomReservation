@@ -131,6 +131,52 @@ public class ReservationRepository
     }
     
     /// <summary>
+    /// Gets list of all reservations and information about them in specific time range.
+    /// </summary>
+    public List<dynamic> GetReservationsByTimeRange(DateTime startTime, DateTime endTime)
+    {
+        var reservations = new List<dynamic>();
+
+        using var conn = new MySqlConnection(DatabaseConfig.ConnectionString);
+        conn.Open();
+
+        Logger.Info("GetReservationsByTimeRange called with:");
+        Logger.Info($"  startTime: {startTime:yyyy-MM-dd HH:mm:ss}");
+        Logger.Info($"  endTime: {endTime:yyyy-MM-dd HH:mm:ss}");
+
+        var query = @"SELECT r.id, r.seat_id as seatId,s.room_id as roomId, r.start_time as startTime, r.end_time as endTime, u.username
+            FROM reservation r JOIN seat s ON r.seat_id = s.id JOIN my_user u ON r.user_id = u.id AND r.start_time < @endTime 
+            AND r.end_time > @startTime ORDER BY r.start_time";
+
+        using var cmd = new MySqlCommand(query, conn);
+        cmd.Parameters.AddWithValue("@startTime", startTime);
+        cmd.Parameters.AddWithValue("@endTime", endTime);
+
+        Logger.Debug($"Executing query: {query}");
+
+        using var reader = cmd.ExecuteReader();
+        while (reader.Read())
+        {
+            var reservation = new
+            {
+                id = reader.GetInt32("id"),
+                seatId = reader.GetInt32("seatId"),
+                roomId = reader.GetInt32("roomId"),
+                startTime = reader.GetDateTime("startTime"),
+                endTime = reader.GetDateTime("endTime"),
+                username = reader.GetString("username")
+            };
+            
+            Logger.Info($"Found reservation: Seat {reservation.seatId}, Room {reservation.roomId}, {reservation.startTime:yyyy-MM-dd HH:mm:ss} - {reservation.endTime:yyyy-MM-dd HH:mm:ss}");
+            
+            reservations.Add(reservation);
+        }
+
+        Logger.Info($"Total reservations found: {reservations.Count}");
+        return reservations;
+    }
+    
+    /// <summary>
     /// Gets all reservations with user and room information.
     /// </summary>
     public List<ReservationViewModel> GetAllReservationsWithDetails()
