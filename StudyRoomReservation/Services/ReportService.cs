@@ -1,10 +1,17 @@
 namespace StudyRoomReservation.Services;
 using MySql.Data.MySqlClient;
 
+/// <summary>
+/// Class generating reports from database data.
+/// </summary>
 public class ReportService
 {
     private readonly string _connectionString = DatabaseConfig.ConnectionString;
 
+    /// <summary>
+    /// Generating summary numbers from reservations, equipment, users and seats.
+    /// </summary>
+    /// <returns>Summary report</returns>
     public ReservationSummaryReport GetReservationSummaryReport()
     {
         using var conn = new MySqlConnection(_connectionString);
@@ -24,6 +31,13 @@ public class ReportService
         };
     }
 
+    /// <summary>
+    ///  Executes a SQL query and returns the first column of the first row.
+    /// </summary>
+    /// <param name="conn">Db connenction</param>
+    /// <param name="query">Db query</param>
+    /// <typeparam name="T"></typeparam>
+    /// <returns></returns>
     private T ExecuteScalar<T>(MySqlConnection conn, string query)
     {
         using var cmd = new MySqlCommand(query, conn);
@@ -31,6 +45,11 @@ public class ReportService
         return result == null || result == DBNull.Value ? default(T) : (T)Convert.ChangeType(result, typeof(T));
     }
 
+    /// <summary>
+    /// Getting room statistics
+    /// </summary>
+    /// <param name="conn">Db connection</param>
+    /// <returns></returns>
     private List<RoomStatistic> GetRoomStats(MySqlConnection conn)
     {
         var stats = new List<RoomStatistic>();
@@ -59,6 +78,11 @@ public class ReportService
         return stats;
     }
 
+    /// <summary>
+    /// Getting user statistics
+    /// </summary>
+    /// <param name="conn"></param>
+    /// <returns></returns>
     private List<UserStatistic> GetUserStats(MySqlConnection conn)
     {
         var stats = new List<UserStatistic>();
@@ -85,6 +109,11 @@ public class ReportService
         return stats;
     }
 
+    /// <summary>
+    /// Getting equipment statistics
+    /// </summary>
+    /// <param name="conn"></param>
+    /// <returns></returns>
     private List<EquipmentStatistic> GetEquipmentStats(MySqlConnection conn)
     {
         var stats = new List<EquipmentStatistic>();
@@ -109,6 +138,9 @@ public class ReportService
     }
 }
 
+/// <summary>
+/// Models
+/// </summary>
 public class ReservationSummaryReport
 {
     public int TotalReservations { get; set; }
