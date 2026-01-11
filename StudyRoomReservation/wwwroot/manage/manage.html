@@ -7,12 +7,41 @@
     <link rel="stylesheet" href="manage.css">
 </head>
 <body>
-<div class="manage-container">
-    <div class="header">
-        <h1>Manage Reservations</h1>
-        <a href="/" class="back-link">Back to Booking</a>
-    </div>
+<div class="header">
+    <h1>Manage Reservations</h1>
+    <a href="/">Back to Booking</a>
+</div>
 
+<div class="container">
+    <div class="stats-grid" id="statsGrid">
+        <div class="stat-box success">
+            <h3>Total Reservations</h3>
+            <div class="number" id="totalRes">-</div>
+        </div>
+        <div class="stat-box success">
+            <h3>Confirmed</h3>
+            <div class="number" id="confirmedRes">-</div>
+        </div>
+        <div class="stat-box warning">
+            <h3>Pending</h3>
+            <div class="number" id="pendingRes">-</div>
+        </div>
+        <div class="stat-box info">
+            <h3>Total Users</h3>
+            <div class="number" id="totalUsers">-</div>
+        </div>
+        <div class="stat-box info">
+            <h3>Total Rooms</h3>
+            <div class="number" id="totalRooms">-</div>
+        </div>
+        <div class="stat-box info">
+            <h3>Total Seats</h3>
+            <div class="number" id="totalSeats">-</div>
+        </div>
+    </div>
+</div>
+    
+<div class="manage-container">
     <div class="filter-section">
         <label for="filterUser">Filter by username:</label>
         <input type="text" id="filterUser" placeholder="Enter username to filter...">

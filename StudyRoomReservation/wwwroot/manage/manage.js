@@ -1,17 +1,18 @@
 let allReservations = [];
 let currentEditId = null;
 
-// Load reservations on page load
+// load reservations on page load
 document.addEventListener("DOMContentLoaded", () => {
     loadReservations();
+    loadStatistics();
 
-    // Filter listener
+    // filter listener
     document.getElementById("filterUser").addEventListener("input", (e) => {
         filterReservations(e.target.value);
     });
 });
 
-// Load all reservations
+// load all reservations
 async function loadReservations() {
     try {
         const res = await fetch("/api/reservations");
@@ -27,7 +28,7 @@ async function loadReservations() {
     }
 }
 
-// Display reservations in table
+// display reservations in table
 function displayReservations(reservations) {
     const tbody = document.getElementById("reservationsBody");
     const noReservations = document.getElementById("noReservations");
@@ -78,13 +79,30 @@ function displayReservations(reservations) {
     });
 }
 
-// Filter reservations
+async function loadStatistics() {
+    try {
+        const res = await fetch("/api/report");
+        if (!res.ok) throw new Error("Failed to load statistics");
+
+        const report = await res.json();
+
+        document.getElementById("totalRes").textContent = report.totalReservations;
+        document.getElementById("confirmedRes").textContent = report.confirmedReservations;
+        document.getElementById("pendingRes").textContent = report.pendingReservations;
+        document.getElementById("totalUsers").textContent = report.totalUsers;
+        document.getElementById("totalRooms").textContent = report.totalRooms;
+        document.getElementById("totalSeats").textContent = report.totalSeats;
+    } catch (err) {
+        console.error("Error loading statistics:", err);
+    }
+}
+
+// filter reservations
 function filterReservations(username) {
     if (!username.trim()) {
         displayReservations(allReservations);
         return;
     }
-
     const filtered = allReservations.filter(res =>
         res.username.toLowerCase().includes(username.toLowerCase())
     );
@@ -92,7 +110,7 @@ function filterReservations(username) {
     displayReservations(filtered);
 }
 
-// Confirm reservation
+// confirm reservation
 async function confirmReservation(id) {
     if (!confirm("Confirm this reservation?")) return;
 
@@ -103,7 +121,7 @@ async function confirmReservation(id) {
 
         if (!res.ok) throw new Error("Failed to confirm");
 
-        alert("Reservation confirmed!");
+        alert("Reservation confirmed");
         loadReservations();
     } catch (err) {
         console.error("Error confirming reservation:", err);
@@ -111,14 +129,14 @@ async function confirmReservation(id) {
     }
 }
 
-// Edit reservation
+// edit reservation
 function editReservation(id) {
     const reservation = allReservations.find(r => r.id === id);
     if (!reservation) return;
 
     currentEditId = id;
 
-    // Convert to datetime-local format
+    // convert to datetime-local format
     const startLocal = new Date(reservation.startTime).toISOString().slice(0, 16);
     const endLocal = new Date(reservation.endTime).toISOString().slice(0, 16);
 
@@ -128,7 +146,7 @@ function editReservation(id) {
     document.getElementById("editModal").style.display = "block";
 }
 
-// Save edit
+// save edit
 async function saveEdit() {
     const startTime = new Date(document.getElementById("editStartTime").value).toISOString();
     const endTime = new Date(document.getElementById("editEndTime").value).toISOString();
@@ -167,13 +185,13 @@ async function saveEdit() {
     }
 }
 
-// Close edit modal
+// close edit modal
 function closeEditModal() {
     document.getElementById("editModal").style.display = "none";
     currentEditId = null;
 }
 
-// Delete reservation
+// delete reservation
 async function deleteReservation(id) {
     if (!confirm("Are you sure you want to delete this reservation?")) return;
 
@@ -184,7 +202,7 @@ async function deleteReservation(id) {
 
         if (!res.ok) throw new Error("Failed to delete");
 
-        alert("Reservation deleted!");
+        alert("Reservation deleted");
         loadReservations();
     } catch (err) {
         console.error("Error deleting reservation:", err);
@@ -192,7 +210,7 @@ async function deleteReservation(id) {
     }
 }
 
-// Close modal when clicking outside
+// close modal when clicking outside
 window.onclick = function(event) {
     const modal = document.getElementById("editModal");
     if (event.target === modal) {

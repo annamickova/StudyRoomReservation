@@ -1,7 +1,7 @@
 body {
     font-family: Arial, sans-serif;
-    max-width: 900px;
-    margin: 40px auto;
+    background: white;
+    margin: 0;
     padding: 20px;
 }
 
@@ -76,4 +76,21 @@ button:hover {
     color: #3498db;
     text-decoration: none;
     font-weight: bold;
+}
+
+a{
+    background-color: #0c6a67;
+    color: white;
+    padding: 10px 20px;
+    text-decoration: none;
+    border-radius: 15px;
+    font-weight: bold;
+    margin-left: 10px;
+}
+
+.header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
 }

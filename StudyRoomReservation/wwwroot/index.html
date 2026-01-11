@@ -6,14 +6,13 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-<h1>Study Room Reservation</h1>
-<div style="text-align: right; padding: 20px;">
-    <a href="/manage.html" style="background-color: #e74c3c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold;">
-        Manage Reservations
-    </a>
-    <a href="/import.html" style="background-color: #27ae60; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; font-weight: bold; margin-left: 10px;">Import CSV
-    </a>
-</div>
+    <div class="header">
+        <h1>Study Room Reservation</h1>
+        <div class="links">
+            <a href="/manage/manage.html">Manage Reservations</a>
+            <a href="/import/import.html">Import CSV</a>
+        </div>
+    </div>
 <div id="rooms"></div>
 <div id="rooms-container"></div>
 <script src="lib/script.js"></script>

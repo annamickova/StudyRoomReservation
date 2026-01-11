@@ -7,14 +7,14 @@ document.addEventListener("DOMContentLoaded", () => {
     // Form for sending request
     const timeForm = document.createElement("div");
     timeForm.innerHTML = `
-        <h2>Vyberte čas rezervace</h2>
-        <label>Začátek:</label><br>
+        <h2>Select time of reservation</h2>
+        <label>Start:</label><br>
         <input type="datetime-local" id="start"><br><br>
 
-        <label>Konec:</label><br>
+        <label>End:</label><br>
         <input type="datetime-local" id="end"><br><br>
 
-        <button id="confirmTime">Potvrdit čas</button>
+        <button id="confirmTime">Confirm time</button>
         <hr><br>
     `;
     container.appendChild(timeForm);
@@ -24,33 +24,48 @@ document.addEventListener("DOMContentLoaded", () => {
         const end = document.getElementById("end").value;
 
         if (!start || !end) {
-            alert("Musíte vybrat oba časy!");
+            alert("You need to pick both times");
             return;
         }
 
         selectedStartTime = new Date(start).toISOString();
         selectedEndTime = new Date(end).toISOString();
 
-        console.log("Vybraný start:", selectedStartTime);
-        console.log("Vybraný end:", selectedEndTime);
+        console.log("Selected start time:", selectedStartTime);
+        console.log("Selected end time:", selectedEndTime);
 
         loadRooms();
     });
-    
-    
+
     // Loading rooms
     async function loadRooms() {
         try {
-            const res = await fetch("/api/rooms");
-            if (!res.ok) throw new Error("Chyba při načítání místností");
+            // Build query parameters
+            const params = new URLSearchParams();
+            if (selectedStartTime) params.append('startTime', selectedStartTime);
+            if (selectedEndTime) params.append('endTime', selectedEndTime);
+
+            const url = `/api/rooms?${params.toString()}`;
+            console.log("Fetching from URL:", url);
+
+            const res = await fetch(url);
+            if (!res.ok) throw new Error("Error loading rooms");
             const data = await res.json();
 
-            console.log("Data received from API:", data);
+            console.log("Data received from API:", JSON.stringify(data, null, 2));
 
-            // ✅ Clear only previously rendered rooms
+            // Check if seats have isReserved property
+            if (data.length > 0 && data[0].seats.length > 0) {
+                console.log("First seat object:", data[0].seats[0]);
+                console.log("Has isReserved?", 'isReserved' in data[0].seats[0]);
+            }
+
             container.querySelectorAll(".room").forEach(r => r.remove());
 
             data.forEach(room => {
+                console.log(`🏠 Processing Room ${room.id} (${room.name})`);
+                console.log(`   Seats in room:`, room.seats);
+
                 const roomDiv = document.createElement("div");
                 roomDiv.className = "room";
 
@@ -90,17 +105,29 @@ document.addEventListener("DOMContentLoaded", () => {
                     equipmentDiv.appendChild(ul);
                     roomDiv.appendChild(equipmentDiv);
                 }
-                
+
                 const seatsDiv = document.createElement("div");
                 seatsDiv.className = "seats";
 
                 room.seats.forEach(seat => {
+                    console.log(`   Seat ${seat.id}: isReserved=${seat.isReserved}`);
+
                     const btn = document.createElement("button");
                     btn.className = "seat";
+
+                    if (seat.isReserved === true) {
+                        console.log(`     → Adding RESERVED class`);
+                        btn.classList.add("reserved");
+                        btn.disabled = true;
+                    } else {
+                        console.log(`     → Adding AVAILABLE class`);
+                        btn.classList.add("available");
+                        btn.addEventListener("click", () =>
+                            reserveSeat(room.id, seat.id)
+                        );
+                    }
+
                     btn.innerText = seat.id;
-                    btn.addEventListener("click", () =>
-                        reserveSeat(room.id, seat.id)
-                    );
                     seatsDiv.appendChild(btn);
                 });
 
@@ -112,15 +139,14 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-
     // Seat reservation
     async function reserveSeat(roomId, seatId) {
         if (!selectedStartTime || !selectedEndTime) {
-            alert("Nejdříve vyberte čas rezervace!");
+            alert("Pick reservation time");
             return;
         }
 
-        const username = prompt("Zadejte vaše jméno:");
+        const username = prompt("Enter username:");
         if (!username) return;
 
         const request = {
@@ -142,12 +168,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!res.ok) {
                 const errData = await res.json();
-                alert("Chyba při rezervaci: " + (errData.error || "neznámá chyba"));
+                alert("Error creating reservation: " + (errData.error || "unknown error"));
             } else {
-                alert("Rezervace úspěšná!");
+                alert("Reservation successful for: " + username);
+                loadRooms(); // Reload rooms to update seat colors
             }
         } catch (err) {
-            console.error("Chyba při rezervaci:", err);
+            console.error("Error creating reservation:", err);
         }
     }
 });
